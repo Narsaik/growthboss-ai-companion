@@ -1,60 +1,32 @@
-"""
-Vercel Serverless Function for GrowthBoss AI Companion
-Simplified version that works without ChromaDB.
-"""
-
+from flask import Flask, request, jsonify, Response
 import os
-import sys
 import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler
 
-# Add project root to path
+app = Flask(__name__)
+
+# Project root
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
 
 
 def get_openai_client():
     """Get OpenAI client if API key is available."""
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        return None, "OPENAI_API_KEY not set. Please configure it in Vercel environment variables."
+        return None, "OPENAI_API_KEY not set. Configure in Vercel Dashboard > Settings > Environment Variables"
     
     try:
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
         return client, None
     except Exception as e:
-        return None, f"Error initializing OpenAI: {str(e)}"
-
-
-def serve_template():
-    """Serve the main HTML page."""
-    template_path = project_root / 'web' / 'templates' / 'index_chatgpt.html'
-    
-    if not template_path.exists():
-        return '<h1>Template not found</h1>'
-    
-    with open(template_path, 'r', encoding='utf-8') as f:
-        html = f.read()
-    
-    # Replace Flask url_for with static paths
-    html = html.replace(
-        "{{ url_for('static', filename='css/chatgpt_style.css') }}",
-        "/static/css/chatgpt_style.css"
-    )
-    html = html.replace(
-        "{{ url_for('static', filename='js/chatgpt_chat.js') }}",
-        "/static/js/chatgpt_chat.js"
-    )
-    
-    return html
+        return None, f"OpenAI init error: {str(e)}"
 
 
 def chat_with_openai(client, message: str, use_council: bool = False) -> str:
-    """Simple chat using OpenAI directly (no RAG)."""
+    """Chat using OpenAI directly."""
     
     if use_council:
         system_prompt = """You are a Marketing Council for GrowthBoss, a Toronto marketing agency.
@@ -96,170 +68,114 @@ Provide helpful, professional responses about marketing, business growth, and Gr
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Error generating response: {str(e)}"
+        return f"Error: {str(e)}"
 
 
-class handler(BaseHTTPRequestHandler):
-    """Vercel serverless function handler."""
+@app.route("/")
+def index():
+    """Serve the main page."""
+    template_path = project_root / "web" / "templates" / "index_chatgpt.html"
     
-    def do_GET(self):
-        """Handle GET requests."""
-        path = self.path.split('?')[0]
+    if not template_path.exists():
+        return "<h1>GrowthBoss AI - Template not found</h1>", 404
+    
+    with open(template_path, "r", encoding="utf-8") as f:
+        html = f.read()
+    
+    # Replace Flask url_for with static paths
+    html = html.replace(
+        "{{ url_for('static', filename='css/chatgpt_style.css') }}",
+        "/static/css/chatgpt_style.css"
+    )
+    html = html.replace(
+        "{{ url_for('static', filename='js/chatgpt_chat.js') }}",
+        "/static/js/chatgpt_chat.js"
+    )
+    
+    return Response(html, mimetype="text/html")
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    """Serve static files."""
+    file_path = project_root / "web" / "static" / filename
+    
+    if not file_path.exists():
+        return "Not found", 404
+    
+    # Determine content type
+    suffix = file_path.suffix.lower()
+    content_types = {
+        ".css": "text/css",
+        ".js": "application/javascript",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".svg": "image/svg+xml",
+    }
+    content_type = content_types.get(suffix, "application/octet-stream")
+    
+    with open(file_path, "rb") as f:
+        content = f.read()
+    
+    return Response(content, mimetype=content_type)
+
+
+@app.route("/api/health")
+def health():
+    """Health check endpoint."""
+    client, error = get_openai_client()
+    return jsonify({
+        "status": "healthy" if client else "error",
+        "openai_configured": client is not None,
+        "error": error,
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+@app.route("/api/session")
+def session():
+    """Get session ID."""
+    return jsonify({"session_id": str(uuid.uuid4())})
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Chat endpoint."""
+    try:
+        data = request.get_json() or {}
+        message = data.get("message", "").strip()
+        use_council = data.get("use_council", False)
+        session_id = data.get("session_id") or str(uuid.uuid4())
         
-        # Handle static files
-        if path.startswith('/static/'):
-            try:
-                static_path = path.replace('/static/', '')
-                file_path = project_root / 'web' / 'static' / static_path
-                if file_path.exists() and file_path.is_file():
-                    if file_path.suffix == '.css':
-                        content_type = 'text/css'
-                    elif file_path.suffix == '.js':
-                        content_type = 'application/javascript'
-                    else:
-                        content_type = 'application/octet-stream'
-                    
-                    with open(file_path, 'rb') as f:
-                        content = f.read()
-                    
-                    self.send_response(200)
-                    self.send_header('Content-Type', content_type)
-                    self.send_header('Cache-Control', 'public, max-age=31536000')
-                    self.end_headers()
-                    self.wfile.write(content)
-                    return
-            except Exception:
-                pass
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
         
-        if path == '/' or path == '':
-            try:
-                html = serve_template()
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html')
-                self.end_headers()
-                self.wfile.write(html.encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'text/html')
-                self.end_headers()
-                self.wfile.write(f'<h1>Error: {str(e)}</h1>'.encode('utf-8'))
-            
-        elif path == '/api/health':
-            client, error = get_openai_client()
-            response = {
-                'status': 'healthy' if client else 'error',
-                'openai_configured': client is not None,
-                'error': error,
-                'timestamp': datetime.now().isoformat(),
-                'note': 'RAG disabled - using direct OpenAI chat'
-            }
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-            
-        elif path == '/api/session':
-            response = {'session_id': str(uuid.uuid4())}
-            
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-            
-        else:
-            try:
-                html = serve_template()
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html')
-                self.end_headers()
-                self.wfile.write(html.encode('utf-8'))
-            except Exception as e:
-                self.send_response(404)
-                self.send_header('Content-Type', 'text/html')
-                self.end_headers()
-                self.wfile.write(b'<h1>Not Found</h1>')
-    
-    def do_POST(self):
-        """Handle POST requests."""
-        path = self.path.split('?')[0]
+        client, error = get_openai_client()
+        if error:
+            return jsonify({
+                "error": "AI system not configured",
+                "message": error
+            }), 500
         
-        if path == '/api/chat':
-            try:
-                content_length = int(self.headers.get('Content-Length', 0))
-                body = self.rfile.read(content_length).decode('utf-8')
-                data = json.loads(body)
-                
-                message = data.get('message', '').strip()
-                use_council = data.get('use_council', False)
-                session_id = data.get('session_id') or str(uuid.uuid4())
-                
-                if not message:
-                    response = {'error': 'Message is required'}
-                    self.send_response(400)
-                    self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
-                    self.end_headers()
-                    self.wfile.write(json.dumps(response).encode('utf-8'))
-                    return
-                
-                # Get OpenAI client
-                client, error = get_openai_client()
-                if error:
-                    response = {
-                        'error': 'Failed to initialize AI system',
-                        'message': error
-                    }
-                    self.send_response(500)
-                    self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
-                    self.end_headers()
-                    self.wfile.write(json.dumps(response).encode('utf-8'))
-                    return
-                
-                # Generate response
-                response_text = chat_with_openai(client, message, use_council)
-                
-                response = {
-                    'response': response_text,
-                    'sources': [],
-                    'timestamp': datetime.now().isoformat(),
-                    'session_id': session_id
-                }
-                
-                if use_council:
-                    response['mentors'] = ['Gary Vee', 'Alex Hormozi', 'Iman Gadzhi']
-                
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-                
-            except Exception as e:
-                response = {'error': str(e)}
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-        else:
-            response = {'error': 'Not found'}
-            self.send_response(404)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode('utf-8'))
-    
-    def do_OPTIONS(self):
-        """Handle CORS preflight."""
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-Session-Id')
-        self.end_headers()
-    
-    def log_message(self, format, *args):
-        """Suppress default logging."""
-        pass
+        response_text = chat_with_openai(client, message, use_council)
+        
+        result = {
+            "response": response_text,
+            "sources": [],
+            "timestamp": datetime.now().isoformat(),
+            "session_id": session_id
+        }
+        
+        if use_council:
+            result["mentors"] = ["Gary Vee", "Alex Hormozi", "Iman Gadzhi"]
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# This is required for Vercel
+if __name__ == "__main__":
+    app.run()

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowthBoss AI Companion - Long-Term Growth. Zero Guesswork.</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1 class="logo">GrowthBoss</h1>
+                    <p class="tagline">Long-Term Growth. Zero Guesswork.</p>
+                </div>
+                <div class="header-info">
+                    <span class="status-indicator" id="statusIndicator">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Connecting...</span>
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Chat Area -->
+        <main class="chat-container">
+            <!-- Welcome Message -->
+            <div class="welcome-section" id="welcomeSection">
+                <div class="welcome-content">
+                    <h2>Your AI Companion for Growth</h2>
+                    <p>Ask me anything about GrowthBoss, marketing strategies, or business growth. I have access to:</p>
+                    <ul class="features-list">
+                        <li>✅ GrowthBoss business knowledge & services</li>
+                        <li>✅ Marketing strategies from Gary Vee, Alex Hormozi, Iman Gadzhi</li>
+                        <li>✅ 30-day content plans & ad campaigns</li>
+                        <li>✅ Pipeline insights & prospecting data</li>
+                        <li>✅ Client onboarding & SDR resources</li>
+                    </ul>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" onclick="setQuickQuestion('What services does GrowthBoss offer?')">
+                            Our Services
+                        </button>
+                        <button class="quick-action-btn" onclick="setQuickQuestion('What is the KLT Ecosystem?')">
+                            KLT Framework
+                        </button>
+                        <button class="quick-action-btn" onclick="setQuickQuestion('How can we improve our pipeline?')">
+                            Pipeline Insights
+                        </button>
+                        <button class="quick-action-btn council-btn" onclick="toggleCouncilMode()">
+                            🎯 Marketing Council
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="messages-container" id="messagesContainer">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <div class="mode-toggle" id="modeToggle">
+                        <button class="mode-btn active" id="ragModeBtn" onclick="setMode('rag')">
+                            📚 Knowledge Base
+                        </button>
+                        <button class="mode-btn" id="councilModeBtn" onclick="setMode('council')">
+                            🎯 Marketing Council
+                        </button>
+                    </div>
+                    <div class="input-box-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Ask me anything about GrowthBoss, marketing, or business growth..."
+                            rows="1"
+                        ></textarea>
+                        <button id="sendButton" class="send-button" onclick="sendMessage()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="input-footer">
+                        <span class="hint">Press Enter to send, Shift+Enter for new line</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
+

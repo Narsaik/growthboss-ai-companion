@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Data directories
+data/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Desktop app
+desktop_app/
+node_modules/
+
+# Other projects
+Yepe.ai/
+content-scoring-app/
+v0-leya-bodysuits-platform/
+GrowthBoss/
+afromena_boxes/
+Creative Assets/
+AI DOCS/
+n8n-secure/
+n8n_workflows/
+deployment/
+
+# Build artifacts
+*.pyc
+dist/
+build/
+
+# Environment
+.env.local
+.env.*.local

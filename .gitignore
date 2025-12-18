@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Data directories (exclude large data files)
+data/chroma/
+data/raw/
+data/processed/
+data/memory/
+data/analytics/
+data/business_intelligence/
+data/comprehensive_extraction/
+*.db
+*.sqlite
+*.sqlite3
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Vercel
+.vercel
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Large media files (optional - uncomment if you want to exclude)
+# *.mp4
+# *.mov
+# *.avi
+# *.mkv
+
+# Generated images (optional - uncomment if you want to exclude)
+# generated_images/
+# imagen_generated_images/
+
+# Desktop app build artifacts
+desktop_app/node_modules/
+desktop_app/dist/
+desktop_app/build/
+
+# Claude settings (may contain sensitive info)
+.claude/settings.local.json

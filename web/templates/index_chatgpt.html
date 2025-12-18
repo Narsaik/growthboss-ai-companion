@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrowthBoss AI Companion</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatgpt_style.css') }}">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">GrowthBoss</div>
+            <div class="mode-badge" id="modeBadge">📚 Knowledge Base</div>
+        </div>
+        <div class="header-right">
+            <div class="status-dot"></div>
+            <span class="status-text">Connected</span>
+        </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container" id="chatContainer">
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-icon">🚀</div>
+            <h1 class="welcome-title">GrowthBoss AI Companion</h1>
+            <p class="welcome-subtitle">Your intelligent assistant for business growth, marketing strategies, and GrowthBoss insights.</p>
+            <div class="suggestions">
+                <button class="suggestion-btn" onclick="sendSuggestion('What services does GrowthBoss offer?')">
+                    💼 What services does GrowthBoss offer?
+                </button>
+                <button class="suggestion-btn" onclick="sendSuggestion('How can we improve our marketing strategy?')">
+                    📈 How can we improve our marketing strategy?
+                </button>
+                <button class="suggestion-btn" onclick="sendSuggestion('What is the KLT Ecosystem?')">
+                    🎯 What is the KLT Ecosystem?
+                </button>
+                <button class="suggestion-btn" onclick="sendSuggestion('Show me our pipeline insights')">
+                    📊 Show me our pipeline insights
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="ragModeBtn" onclick="setMode('rag')">📚 Knowledge Base</button>
+                <button class="mode-btn" id="councilModeBtn" onclick="setMode('council')">🎯 Marketing Council</button>
+            </div>
+            <textarea 
+                class="input-box" 
+                id="messageInput" 
+                placeholder="Message GrowthBoss AI..."
+                rows="1"
+            ></textarea>
+            <button class="send-button" id="sendButton" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/chatgpt_chat.js') }}"></script>
+</body>
+</html>
+
+
+
+
+

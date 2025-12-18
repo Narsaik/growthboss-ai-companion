@@ -26,13 +26,23 @@ COLLECTION_NAME = "growthboss-rag"
 def get_agents():
     """Initialize and return agent instances."""
     try:
+        # Note: ChromaDB won't work in serverless - each function has isolated filesystem
+        # This will fail unless using ChromaDB Cloud or external vector DB
         researcher = ResearcherAgent(collection_name=COLLECTION_NAME, use_enhanced=True)
         council = MarketingCouncil(collection_name=COLLECTION_NAME)
         return researcher, council, None
     except RuntimeError as e:
-        return None, None, str(e)
+        error_msg = str(e)
+        if "OPENAI_API_KEY" in error_msg:
+            return None, None, "OPENAI_API_KEY not set. Please configure it in Vercel environment variables."
+        return None, None, error_msg
     except Exception as e:
-        return None, None, f"Error initializing agents: {str(e)}"
+        error_type = type(e).__name__
+        error_msg = str(e)
+        # Check for ChromaDB errors
+        if "chroma" in error_msg.lower() or "chromadb" in error_msg.lower():
+            return None, None, "ChromaDB error: Local ChromaDB doesn't work in serverless. Use ChromaDB Cloud or external vector database."
+        return None, None, f"Error initializing agents ({error_type}): {error_msg}"
 
 
 def serve_template():
@@ -63,16 +73,53 @@ class handler(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """Handle GET requests."""
+        # Get path without query string
         path = self.path.split('?')[0]
+        
+        # Handle static files (fallback if routing doesn't work)
+        if path.startswith('/static/'):
+            try:
+                static_path = path.replace('/static/', '')
+                file_path = project_root / 'web' / 'static' / static_path
+                if file_path.exists() and file_path.is_file():
+                    # Determine content type
+                    if file_path.suffix == '.css':
+                        content_type = 'text/css'
+                    elif file_path.suffix == '.js':
+                        content_type = 'application/javascript'
+                    elif file_path.suffix == '.png':
+                        content_type = 'image/png'
+                    elif file_path.suffix == '.jpg' or file_path.suffix == '.jpeg':
+                        content_type = 'image/jpeg'
+                    else:
+                        content_type = 'application/octet-stream'
+                    
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                    
+                    self.send_response(200)
+                    self.send_header('Content-Type', content_type)
+                    self.send_header('Cache-Control', 'public, max-age=31536000')
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+            except Exception as e:
+                pass  # Fall through to 404
         
         if path == '/' or path == '':
             # Serve main page
-            html = serve_template()
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html')
-            self.send_header('Cache-Control', 'public, max-age=3600')
-            self.end_headers()
-            self.wfile.write(html.encode('utf-8'))
+            try:
+                html = serve_template()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.send_header('Cache-Control', 'public, max-age=3600')
+                self.end_headers()
+                self.wfile.write(html.encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f'<h1>Error loading template: {str(e)}</h1>'.encode('utf-8'))
             
         elif path == '/api/health':
             # Health check
@@ -93,6 +140,7 @@ class handler(BaseHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode('utf-8'))
             
@@ -103,16 +151,23 @@ class handler(BaseHTTPRequestHandler):
             
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode('utf-8'))
             
         else:
             # Default to index for SPA routing
-            html = serve_template()
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html')
-            self.end_headers()
-            self.wfile.write(html.encode('utf-8'))
+            try:
+                html = serve_template()
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(html.encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'text/html')
+                self.end_headers()
+                self.wfile.write(f'<h1>Error: {str(e)}</h1>'.encode('utf-8'))
     
     def do_POST(self):
         """Handle POST requests."""
@@ -133,6 +188,7 @@ class handler(BaseHTTPRequestHandler):
                     response = {'error': 'Message is required'}
                     self.send_response(400)
                     self.send_header('Content-Type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
                     self.end_headers()
                     self.wfile.write(json.dumps(response).encode('utf-8'))
                     return
@@ -142,10 +198,12 @@ class handler(BaseHTTPRequestHandler):
                 if error:
                     response = {
                         'error': 'Failed to initialize AI system',
-                        'message': error
+                        'message': error,
+                        'hint': 'Check Vercel environment variables and ChromaDB configuration'
                     }
                     self.send_response(500)
                     self.send_header('Content-Type', 'application/json')
+                    self.send_header('Access-Control-Allow-Origin', '*')
                     self.end_headers()
                     self.wfile.write(json.dumps(response).encode('utf-8'))
                     return
@@ -198,13 +256,21 @@ class handler(BaseHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode('utf-8'))
                 
             except Exception as e:
-                response = {'error': str(e)}
+                import traceback
+                error_trace = traceback.format_exc()
+                response = {
+                    'error': str(e),
+                    'type': type(e).__name__,
+                    'traceback': error_trace if os.getenv('VERCEL_ENV') == 'development' else None
+                }
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode('utf-8'))
         else:

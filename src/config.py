@@ -24,8 +24,13 @@ RAW_DIR = os.path.join(DATA_DIR, "raw")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 CHROMA_DIR = os.path.join(DATA_DIR, "chroma")
 
-os.makedirs(RAW_DIR, exist_ok=True)
-os.makedirs(PROCESSED_DIR, exist_ok=True)
-os.makedirs(CHROMA_DIR, exist_ok=True)
+# Only create directories if not in serverless environment (Vercel has read-only filesystem)
+if not os.getenv("VERCEL"):
+	try:
+		os.makedirs(RAW_DIR, exist_ok=True)
+		os.makedirs(PROCESSED_DIR, exist_ok=True)
+		os.makedirs(CHROMA_DIR, exist_ok=True)
+	except OSError:
+		pass  # Ignore if we can't create directories (serverless)
 
 
